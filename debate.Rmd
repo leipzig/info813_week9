@@ -1,0 +1,135 @@
+---
+title: "Structural Equation Models with Latent Variables"
+author: "Jeremy Leipzig"
+date: "May 25, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## Data
+```{r dataset, echo=FALSE}
+debateMen<-'
+21.1
+18.5  21.4
+19.3  19.2  21.1
+ 5.3   5.6   5.7   7.9
+ 5.0   4.8   5.2   5.2   6.5
+ 5.1   5.3   5.2   0.2   0.0   6.3
+ 5.4   5.6   5.3   0.1   0.0   4.7   6.7'
+
+debateWomen<-'
+39.4
+37.1  39.2
+37.9  37.6  40.5
+11.1  11.2  11.4   7.8
+10.0   9.8  10.3   5.2   6.9
+ 5.3   5.7   5.5   0.2   0.9   6.8
+ 5.6   6.1   5.5   0.1   0.0   4.5   6.7'
+
+library(lavaan)
+library(semPlot)
+library(gridExtra)
+debateMen.cov <- 
+    getCov(debateMen, names = c("S1", "S2", 
+                            "S3", "P1",
+                            "P2", "Q1", "Q2"))
+debateWomen.cov <- 
+    getCov(debateWomen, names = c("S1", "S2", 
+                            "S3", "P1",
+                            "P2", "Q1", "Q2"))
+```
+
+```{r}
+knitr::kable(debateMen.cov)
+```
+
+# Fair Model
+I assumed the ratings would be a product of the personableness of the candidate and the quality of the arguments.
+
+```{r formulation}
+
+
+
+fair.model <- '
+  # latent variables
+    scales     =~ S1 + S2 + S3
+    personable =~ P1 + P2
+    argument =~ Q1 + Q2
+  # regressions
+    scales ~ personable + argument
+'
+
+
+
+  # regressions
+    #alien71 ~ alien67 + ses
+    #alien67 ~ ses
+  # correlated residuals
+    #anomia67 ~~ anomia71
+    #powerless67 ~~ powerless71
+fit.fair.men <- sem(fair.model, 
+           sample.cov = debateMen.cov, 
+           sample.nobs = 154)
+fit.fair.women <- sem(fair.model, 
+           sample.cov = debateWomen.cov, 
+           sample.nobs = 125)
+heatmap(debateMen.cov)
+heatmap(debateWomen.cov)
+```
+
+```{r plotsem, echo=FALSE}
+semPaths(fit.fair.men, title = FALSE, curvePivot = TRUE)
+```
+
+### Summary of males
+```{r}
+summary(fit.fair.men, standardized = TRUE, fit.measures = TRUE)
+```
+
+### Summary of females
+```{r}
+summary(fit.fair.women, standardized = TRUE, fit.measures = TRUE)
+```
+
+# Partisan Model
+Here I predicted arguments would fall in line with personableness
+```{r}
+partisan.model <- '
+  scales     =~ S1 + S2 + S3
+    personable =~ P1 + P2
+    argument =~ Q1 + Q2
+    argument ~ personable
+    scales ~ argument
+'
+
+fit.partisan.men <- sem(partisan.model, 
+           sample.cov = debateMen.cov, 
+           sample.nobs = 154)
+fit.partisan.women <- sem(partisan.model, 
+           sample.cov = debateWomen.cov, 
+           sample.nobs = 125)
+```
+
+```{r partisanplotsem, echo=FALSE}
+semPaths(fit.partisan.men, title = FALSE, curvePivot = TRUE)
+```
+
+### Summary of partisan males
+```{r}
+summary(fit.partisan.men, standardized = TRUE, fit.measures = TRUE)
+```
+
+### Summary of partisan females
+```{r}
+summary(fit.partisan.women, standardized = TRUE, fit.measures = TRUE)
+```
+
+### Comparison
+```{r}
+anova(fit.fair.men, fit.partisan.men)
+anova(fit.fair.women, fit.partisan.women)
+```
+
+It appears the fair model is a better fit, and that personableness is a modestly stronger indicator than predictor of ratings for women than men.
